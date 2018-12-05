@@ -8,6 +8,14 @@
 
 #import <UIKit/UIKit.h>
 
+/**
+ Get resource scale from the file name, using standard Apple naming conventions
+
+ @param path Path or only a file name of the resource
+ @return Resource scale
+ */
+CGFloat ResourceScaleFromPath(NSString *path);
+
 @interface YLGIFImage : UIImage
 
 ///-----------------------

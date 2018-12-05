@@ -54,10 +54,30 @@ inline static BOOL CGImageSourceContainsAnimatedGif(CGImageSourceRef imageSource
     return imageSource && UTTypeConformsTo(CGImageSourceGetType(imageSource), kUTTypeGIF) && CGImageSourceGetCount(imageSource) > 1;
 }
 
-inline static BOOL isRetinaFilePath(NSString *path)
+
+CGFloat ResourceScaleFromPath(NSString *path)
 {
-    NSRange retinaSuffixRange = [[path lastPathComponent] rangeOfString:@"@2x" options:NSCaseInsensitiveSearch];
-    return retinaSuffixRange.length && retinaSuffixRange.location != NSNotFound;
+	static NSRegularExpression *scaleRegEx = nil;
+	static dispatch_once_t onceToken;
+	dispatch_once(&onceToken, ^{
+		NSError *error;
+		scaleRegEx = [NSRegularExpression regularExpressionWithPattern:@"@(\\d)x" options:NSRegularExpressionCaseInsensitive error:&error];
+	});
+	
+	NSString *fileName = [[path lastPathComponent] stringByDeletingPathExtension];
+	NSArray *results = [scaleRegEx matchesInString:fileName options:0 range:NSMakeRange(0, fileName.length)];
+	
+	NSTextCheckingResult *lastResult = [results lastObject];
+	
+	if( lastResult.numberOfRanges < 2 ) {
+		// default scale
+		return 1.0;
+	}
+	
+	NSRange scaleRange = [lastResult rangeAtIndex:1];
+	CGFloat scale = [[fileName substringWithRange:scaleRange] floatValue];
+	
+	return scale;
 }
 
 @interface YLGIFImage ()
@@ -95,7 +115,7 @@ static int _prefetchedNum = 10;
 + (id)imageWithContentsOfFile:(NSString *)path
 {
     return [self imageWithData:[NSData dataWithContentsOfFile:path]
-                         scale:isRetinaFilePath(path) ? 2.0f : 1.0f];
+                         scale:ResourceScaleFromPath(path)];
 }
 
 + (id)imageWithData:(NSData *)data
@@ -130,7 +150,7 @@ static int _prefetchedNum = 10;
 - (id)initWithContentsOfFile:(NSString *)path
 {
     return [self initWithData:[NSData dataWithContentsOfFile:path]
-                        scale:isRetinaFilePath(path) ? 2.0f : 1.0f];
+                        scale:ResourceScaleFromPath(path)];
 }
 
 - (id)initWithData:(NSData *)data
