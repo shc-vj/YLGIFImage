@@ -54,7 +54,7 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
 
 - (NSString *)runLoopMode
 {
-    return _runLoopMode ?: NSRunLoopCommonModes;
+	return _runLoopMode ?: NSRunLoopCommonModes;
 }
 
 - (void)setRunLoopMode:(NSString *)runLoopMode
@@ -147,6 +147,8 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
         return;
     }
 	
+	NSUInteger prevFrame = self.currentFrameIndex;
+	
 	self.accumulator += fmin(displayLink.duration, kMaxTimeStep);
     
     while (self.accumulator >= self.animatedImage.frameDurations[_currentFrameIndex]) {
@@ -158,10 +160,12 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
             }
             self.currentFrameIndex = 0;
         }
-		self.currentFrameIndex = MIN(self.currentFrameIndex, [self.animatedImage.images count] - 1);
+	}
+	
+	self.currentFrameIndex = MIN(self.currentFrameIndex, [self.animatedImage.images count] - 1);
+	if( self.currentFrameIndex != prevFrame ) {
 		self.currentFrame = [self.animatedImage getFrameWithIndex:self.currentFrameIndex];
 		[self.layer setNeedsDisplay];
-
 	}
 }
 

@@ -222,7 +222,7 @@ static int _prefetchedNum = 10;
 
 - (UIImage*)getFrameWithIndex:(NSUInteger)idx
 {
-    __block UIImage *frame = nil;
+	__block UIImage *frame = nil;
 	
 	dispatch_barrier_sync(readFrameQueue, ^{
 		frame = self.images[idx];
@@ -250,7 +250,8 @@ static int _prefetchedNum = 10;
 			}
 		}
 	});
-    return frame;
+	
+	return frame;
 }
 
 #pragma mark - Compatibility methods
