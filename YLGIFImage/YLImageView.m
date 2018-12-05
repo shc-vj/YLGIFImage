@@ -27,6 +27,7 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
 
 @synthesize runLoopMode = _runLoopMode;
 @synthesize displayLink = _displayLink;
+@synthesize currentFrameIndex = _currentFrameIndex;
 
 - (id)init
 {
@@ -142,24 +143,26 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
 
 - (void)changeKeyframe:(CADisplayLink *)displayLink
 {
-    if (self.currentFrameIndex >= [self.animatedImage.images count]) {
+	if (self.currentFrameIndex >= [self.animatedImage.images count]) {
         return;
     }
-    self.accumulator += fmin(displayLink.duration, kMaxTimeStep);
+	
+	self.accumulator += fmin(displayLink.duration, kMaxTimeStep);
     
-    while (self.accumulator >= self.animatedImage.frameDurations[self.currentFrameIndex]) {
-        self.accumulator -= self.animatedImage.frameDurations[self.currentFrameIndex];
-        if (++self.currentFrameIndex >= [self.animatedImage.images count]) {
+    while (self.accumulator >= self.animatedImage.frameDurations[_currentFrameIndex]) {
+        self.accumulator -= self.animatedImage.frameDurations[_currentFrameIndex];
+        if (++_currentFrameIndex >= [self.animatedImage.images count]) {
             if (--self.loopCountdown == 0) {
                 [self stopAnimating];
                 return;
             }
             self.currentFrameIndex = 0;
         }
-        self.currentFrameIndex = MIN(self.currentFrameIndex, [self.animatedImage.images count] - 1);
-        self.currentFrame = [self.animatedImage getFrameWithIndex:self.currentFrameIndex];
-        [self.layer setNeedsDisplay];
-    }
+		self.currentFrameIndex = MIN(self.currentFrameIndex, [self.animatedImage.images count] - 1);
+		self.currentFrame = [self.animatedImage getFrameWithIndex:self.currentFrameIndex];
+		[self.layer setNeedsDisplay];
+
+	}
 }
 
 - (void)displayLayer:(CALayer *)layer
@@ -168,7 +171,7 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
         return;
     }
     //NSLog(@"display index: %luu", (unsigned long)self.currentFrameIndex);
-    if(self.currentFrame && ![self.currentFrame isKindOfClass:[NSNull class]])
+    if(self.currentFrame && [self.currentFrame isKindOfClass:[UIImage class]])
         layer.contents = (__bridge id)([self.currentFrame CGImage]);
 }
 
@@ -216,6 +219,7 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
 {
     return self.image.size;
 }
+
 
 @end
 

@@ -68,9 +68,11 @@ inline static BOOL isRetinaFilePath(NSString *path)
 @property (nonatomic, readwrite) NSUInteger loopCount;
 @property (nonatomic, readwrite) CGImageSourceRef incrementalSource;
 
+- (UIImage*)imageFromIndex:(NSUInteger)idx;
+
 @end
 
-static NSUInteger _prefetchedNum = 10;
+static int _prefetchedNum = 10;
 
 @implementation YLGIFImage
 {
@@ -85,7 +87,7 @@ static NSUInteger _prefetchedNum = 10;
 
 + (id)imageNamed:(NSString *)name
 {
-    NSString *path = [[NSBundle mainBundle] pathForResource:name ofType:nil];
+    NSString *path = [[[NSBundle mainBundle] bundlePath] stringByAppendingPathComponent:name];
     
     return ([[NSFileManager defaultManager] fileExistsAtPath:path]) ? [self imageWithContentsOfFile:path] : nil;
 }
@@ -187,65 +189,67 @@ static NSUInteger _prefetchedNum = 10;
         self.totalDuration += frameDuration;
     }
     //CFTimeInterval start = CFAbsoluteTimeGetCurrent();
-    // Load first frame
-    NSUInteger num = MIN(_prefetchedNum, numberOfFrames);
-    for (NSUInteger i=0; i<num; i++) {
-        CGImageRef image = CGImageSourceCreateImageAtIndex(imageSource, i, NULL);
-        if (image != NULL) {
-            [self.images replaceObjectAtIndex:i withObject:[UIImage imageWithCGImage:image scale:_scale orientation:UIImageOrientationUp]];
-            CFRelease(image);
-        } else {
-            [self.images replaceObjectAtIndex:i withObject:[NSNull null]];
-        }
-    }
-    _imageSourceRef = imageSource;
-    CFRetain(_imageSourceRef);
-    CFRelease(imageSource);
-    //});
-    
-    _scale = scale;
-    readFrameQueue = dispatch_queue_create("com.ronnie.gifreadframe", DISPATCH_QUEUE_SERIAL);
-    
+	
+	_imageSourceRef = imageSource;
+	CFRetain(_imageSourceRef);
+	CFRelease(imageSource);
+
+	_scale = scale;
+
+	readFrameQueue = dispatch_queue_create("com.ronnie.gifreadframe", DISPATCH_QUEUE_CONCURRENT);
+	
+	// Prefetch frames
+	NSUInteger num = MIN(_prefetchedNum, numberOfFrames);
+    for (int i=0; i<num; i++) {
+		dispatch_async(readFrameQueue, ^{
+			[self imageFromIndex:i];
+		});
+	}
+	
+	
     return self;
+}
+
+- (UIImage*)imageFromIndex:(NSUInteger)idx
+{
+	CGImageRef image = CGImageSourceCreateImageAtIndex(self->_imageSourceRef, idx, NULL);
+	UIImage *frame = [UIImage imageWithCGImage:image scale:self->_scale orientation:UIImageOrientationUp];
+	[self.images replaceObjectAtIndex:idx withObject:frame];
+	CFRelease(image);
+	
+	return frame;
 }
 
 - (UIImage*)getFrameWithIndex:(NSUInteger)idx
 {
-    //    if([self.images[idx] isKindOfClass:[NSNull class]])
-    //        return nil;
-    UIImage* frame = nil;
-    @synchronized(self.images) {
-        frame = self.images[idx];
-    }
-    if(!frame) {
-        CGImageRef image = CGImageSourceCreateImageAtIndex(_imageSourceRef, idx, NULL);
-        if (image != NULL) {
-            frame = [UIImage imageWithCGImage:image scale:_scale orientation:UIImageOrientationUp];
-            CFRelease(image);
-        }
-    }
-    if(self.images.count > _prefetchedNum) {
-        if(idx != 0) {
-            [self.images replaceObjectAtIndex:idx withObject:[NSNull null]];
-        }
-        NSUInteger nextReadIdx = (idx + _prefetchedNum);
-        for(NSUInteger i=idx+1; i<=nextReadIdx; i++) {
-            NSUInteger _idx = i%self.images.count;
-            if([self.images[_idx] isKindOfClass:[NSNull class]]) {
-                dispatch_async(readFrameQueue, ^{
-                    CGImageRef image = CGImageSourceCreateImageAtIndex(_imageSourceRef, _idx, NULL);
-                    @synchronized(self.images) {
-                        if (image != NULL) {
-                            [self.images replaceObjectAtIndex:_idx withObject:[UIImage imageWithCGImage:image scale:_scale orientation:UIImageOrientationUp]];
-                            CFRelease(image);
-                        } else {
-                            [self.images replaceObjectAtIndex:_idx withObject:[NSNull null]];
-                        }
-                    }
-                });
-            }
-        }
-    }
+    __block UIImage *frame = nil;
+	
+	dispatch_barrier_sync(readFrameQueue, ^{
+		frame = self.images[idx];
+	
+		if( ![frame isKindOfClass:UIImage.class] ) {
+			frame = [self imageFromIndex:idx];
+		}
+		
+		if(self.images.count > _prefetchedNum) {
+			// discard previous image
+			if(idx > 0) {
+				[self.images replaceObjectAtIndex:idx-1 withObject:[NSNull null]];
+			} else {
+				[self.images replaceObjectAtIndex:self.images.count-1 withObject:[NSNull null]];
+			}
+			// check for precached images
+			NSUInteger nextReadIdx = (idx + _prefetchedNum);
+			for(NSUInteger i=idx+1; i<=nextReadIdx; i++) {
+				NSUInteger _idx = i%self.images.count;
+				if([self.images[_idx] isKindOfClass:[NSNull class]]) {
+					dispatch_async(self->readFrameQueue, ^{
+						[self imageFromIndex:_idx];
+					});
+				}
+			}
+		}
+	});
     return frame;
 }
 
