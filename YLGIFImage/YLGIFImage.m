@@ -233,11 +233,12 @@ static int _prefetchedNum = 10;
 - (UIImage*)imageFromIndex:(NSUInteger)idx
 {
 	CGImageRef image = CGImageSourceCreateImageAtIndex(self->_imageSourceRef, idx, NULL);
-	UIImage *frame = [UIImage imageWithCGImage:image scale:self->_scale orientation:UIImageOrientationUp];
-	[self.images replaceObjectAtIndex:idx withObject:frame];
+	UIImage *uiImage = [UIImage imageWithCGImage:image scale:self.scale orientation:self.imageOrientation];
 	CFRelease(image);
 	
-	return frame;
+	[self.images replaceObjectAtIndex:idx withObject:uiImage];
+	
+	return uiImage;
 }
 
 - (UIImage*)getFrameWithIndex:(NSUInteger)idx
@@ -245,12 +246,14 @@ static int _prefetchedNum = 10;
 	__block UIImage *frame = nil;
 	
 	dispatch_barrier_sync(readFrameQueue, ^{
-		frame = self.images[idx];
-	
-		if( ![frame isKindOfClass:UIImage.class] ) {
+		id entry = self.images[idx];
+
+		if( [entry isKindOfClass:NSNull.class] ) {
 			frame = [self imageFromIndex:idx];
+		} else {
+			frame = entry;
 		}
-		
+	
 		if(self.images.count > _prefetchedNum) {
 			// discard previous image
 			if(idx > 0) {
@@ -279,15 +282,38 @@ static int _prefetchedNum = 10;
 - (CGSize)size
 {
     if (self.images.count) {
-        return [[self.images objectAtIndex:0] size];
-    }
-    return [super size];
+		UIImage *uiImage = [self.images firstObject];
+		if( [uiImage isKindOfClass:NSNull.class] ) {
+			return [super size];
+		}
+		return [uiImage size];
+	} else {
+    	return [super size];
+	}
+}
+
+- (CIImage*)CIImage
+{
+	if (self.images.count) {
+		UIImage *uiImage = [self.images firstObject];
+		if( [uiImage isKindOfClass:NSNull.class] ) {
+			return [super CIImage];
+		}
+		CGImageRef image =  uiImage.CGImage;
+		return 	[CIImage imageWithCGImage:image];
+	} else {
+		return [super CIImage];
+	}
 }
 
 - (CGImageRef)CGImage
 {
     if (self.images.count) {
-        return [[self.images objectAtIndex:0] CGImage];
+		UIImage *uiImage = [self.images firstObject];
+		if( [uiImage isKindOfClass:NSNull.class] ) {
+			return [super CGImage];
+		}
+		return uiImage.CGImage;
     } else {
         return [super CGImage];
     }
@@ -296,7 +322,7 @@ static int _prefetchedNum = 10;
 - (UIImageOrientation)imageOrientation
 {
     if (self.images.count) {
-        return [[self.images objectAtIndex:0] imageOrientation];
+		return UIImageOrientationUp;
     } else {
         return [super imageOrientation];
     }
@@ -305,7 +331,7 @@ static int _prefetchedNum = 10;
 - (CGFloat)scale
 {
     if (self.images.count) {
-        return [(UIImage *)[self.images objectAtIndex:0] scale];
+		return _scale;
     } else {
         return [super scale];
     }

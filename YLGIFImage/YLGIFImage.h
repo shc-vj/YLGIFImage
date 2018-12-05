@@ -22,6 +22,7 @@ CGFloat ResourceScaleFromPath(NSString *path);
 /// @name Image Attributes
 ///-----------------------
 
+
 /**
  A C array containing the frame durations.
  

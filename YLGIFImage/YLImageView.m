@@ -14,9 +14,10 @@
 
 @property (nonatomic, strong) YLGIFImage *animatedImage;
 @property (nonatomic, strong) CADisplayLink *displayLink;
+@property (nonatomic, assign) BOOL displayLinkPaused;
 @property (nonatomic) NSTimeInterval accumulator;
 @property (nonatomic) NSUInteger currentFrameIndex;
-@property (nonatomic, strong) UIImage* currentFrame;
+@property (nonatomic, strong) UIImage *currentFrame;
 @property (nonatomic) NSUInteger loopCountdown;
 
 @end
@@ -34,14 +35,15 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
     self = [super init];
     if (self) {
         self.currentFrameIndex = 0;
+		self.displayLinkPaused = YES;
     }
     return self;
 }
 
 - (CADisplayLink *)displayLink
 {
-    if (self.superview) {
-        if (!_displayLink && self.animatedImage) {
+	if( self.window && self.animatedImage ) {
+        if (!_displayLink) {
             _displayLink = [CADisplayLink displayLinkWithTarget:self selector:@selector(changeKeyframe:)];
             [_displayLink addToRunLoop:[NSRunLoop mainRunLoop] forMode:self.runLoopMode];
         }
@@ -83,19 +85,30 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
     self.currentFrameIndex = 0;
     self.loopCountdown = 0;
     self.accumulator = 0;
-    
-    if ([image isKindOfClass:[YLGIFImage class]] && image.images) {
-        if([image.images[0] isKindOfClass:UIImage.class])
-            [super setImage:image.images[0]];
-        else
-            [super setImage:nil];
+	
+	
+    if ([image isKindOfClass:[YLGIFImage class]] ) {
+		YLGIFImage *gifImage = (YLGIFImage*)image;
+
+		if( gifImage.images.count <= 1 ) {
+			self.animatedImage = nil;
+		} else {
+			UIImage *firstImage = [gifImage.images firstObject];
+
+			if( [firstImage isKindOfClass:NSNull.class]) {
+				[super setImage:nil];
+			} else {
+				// get first frame
+				[super setImage:firstImage];
+			}
+			self.animatedImage = (YLGIFImage *)image;
+		}
+		
         self.currentFrame = nil;
-        self.animatedImage = (YLGIFImage *)image;
         self.loopCountdown = self.animatedImage.loopCount ?: NSUIntegerMax;
-        [self startAnimating];
     } else {
         self.animatedImage = nil;
-        [super setImage:image];
+		[super setImage:image];
     }
     [self.layer setNeedsDisplay];
 }
@@ -122,7 +135,7 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
     
     self.loopCountdown = 0;
     
-    self.displayLink.paused = YES;
+	self.displayLink.paused = YES;
 }
 
 - (void)startAnimating
@@ -132,13 +145,9 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
         return;
     }
     
-    if (self.isAnimating) {
-        return;
-    }
-    
+	self.displayLink.paused = NO;
+	
     self.loopCountdown = self.animatedImage.loopCount ?: NSUIntegerMax;
-    
-    self.displayLink.paused = NO;
 }
 
 - (void)changeKeyframe:(CADisplayLink *)displayLink
@@ -146,6 +155,7 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
 	if (self.currentFrameIndex >= [self.animatedImage.images count]) {
         return;
     }
+	
 	
 	NSUInteger prevFrame = self.currentFrameIndex;
 	
@@ -175,8 +185,9 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
         return;
     }
     //NSLog(@"display index: %luu", (unsigned long)self.currentFrameIndex);
-    if(self.currentFrame && [self.currentFrame isKindOfClass:[UIImage class]])
-        layer.contents = (__bridge id)([self.currentFrame CGImage]);
+	if(self.currentFrame) {
+        layer.contents = (__bridge id)self.currentFrame.CGImage;
+	}
 }
 
 - (void)didMoveToWindow
