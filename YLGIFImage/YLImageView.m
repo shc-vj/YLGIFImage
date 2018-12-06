@@ -14,7 +14,6 @@
 
 @property (nonatomic, strong) YLGIFImage *animatedImage;
 @property (nonatomic, strong) CADisplayLink *displayLink;
-@property (nonatomic, assign) BOOL displayLinkPaused;
 @property (nonatomic) NSTimeInterval accumulator;
 @property (nonatomic) NSUInteger currentFrameIndex;
 @property (nonatomic, strong) UIImage *currentFrame;
@@ -35,7 +34,6 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
     self = [super init];
     if (self) {
         self.currentFrameIndex = 0;
-		self.displayLinkPaused = YES;
     }
     return self;
 }
@@ -93,14 +91,9 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
 		if( gifImage.images.count <= 1 ) {
 			self.animatedImage = nil;
 		} else {
-			UIImage *firstImage = [gifImage.images firstObject];
+			UIImage *firstImage = [gifImage getFrameWithIndex:0];
+			[super setImage:firstImage];
 
-			if( [firstImage isKindOfClass:NSNull.class]) {
-				[super setImage:nil];
-			} else {
-				// get first frame
-				[super setImage:firstImage];
-			}
 			self.animatedImage = (YLGIFImage *)image;
 		}
 		
@@ -133,8 +126,18 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
         return;
     }
     
-    self.loopCountdown = 0;
+	self.currentFrameIndex = 0;
+	self.loopCountdown = 0;
     
+	self.displayLink.paused = YES;
+}
+
+- (void)pauseAnimating
+{
+	if (!self.animatedImage) {
+		return;
+	}
+	
 	self.displayLink.paused = YES;
 }
 
@@ -144,7 +147,7 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
         [super startAnimating];
         return;
     }
-    
+	
 	self.displayLink.paused = NO;
 	
     self.loopCountdown = self.animatedImage.loopCount ?: NSUIntegerMax;
@@ -172,8 +175,8 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
         }
 	}
 	
-	self.currentFrameIndex = MIN(self.currentFrameIndex, [self.animatedImage.images count] - 1);
 	if( self.currentFrameIndex != prevFrame ) {
+		self.currentFrameIndex = MIN(self.currentFrameIndex, [self.animatedImage.images count] - 1);
 		self.currentFrame = [self.animatedImage getFrameWithIndex:self.currentFrameIndex];
 		[self.layer setNeedsDisplay];
 	}
