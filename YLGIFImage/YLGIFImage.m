@@ -282,7 +282,7 @@ static int _prefetchedNum = 10;
 - (CGSize)size
 {
     if (self.images.count) {
-		UIImage *uiImage = [self imageFromIndex:0];
+		UIImage *uiImage = [self getFrameWithIndex:0];
 		return [uiImage size];
 	} else {
     	return [super size];
@@ -292,7 +292,7 @@ static int _prefetchedNum = 10;
 - (CIImage*)CIImage
 {
 	if (self.images.count) {
-		UIImage *uiImage = [self imageFromIndex:0];
+		UIImage *uiImage = [self getFrameWithIndex:0];
 		CGImageRef image =  uiImage.CGImage;
 		return 	[CIImage imageWithCGImage:image];
 	} else {
@@ -303,7 +303,7 @@ static int _prefetchedNum = 10;
 - (CGImageRef)CGImage
 {
     if (self.images.count) {
-		UIImage *uiImage = [self imageFromIndex:0];
+		UIImage *uiImage = [self getFrameWithIndex:0];
 		return uiImage.CGImage;
     } else {
         return [super CGImage];
