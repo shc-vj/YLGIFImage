@@ -217,7 +217,7 @@ static int _prefetchedNum = 10;
 	_scale = scale;
 
 	readFrameQueue = dispatch_queue_create("com.ronnie.gifreadframe", DISPATCH_QUEUE_CONCURRENT);
-		
+	
     return self;
 }
 
@@ -252,15 +252,16 @@ static int _prefetchedNum = 10;
 			} else {
 				[self.images replaceObjectAtIndex:self.images.count-1 withObject:[NSNull null]];
 			}
-			// check for precached images
-			NSUInteger nextReadIdx = (idx + _prefetchedNum);
-			for(NSUInteger i=idx+1; i<=nextReadIdx; i++) {
-				NSUInteger _idx = i%self.images.count;
-				if([self.images[_idx] isKindOfClass:[NSNull class]]) {
-					dispatch_async(self->readFrameQueue, ^{
-						[self imageFromIndex:_idx];
-					});
-				}
+		}
+		
+		// check for precached images
+		NSUInteger nextReadIdx = (idx + _prefetchedNum);
+		for(NSUInteger i=idx+1; i<=nextReadIdx; i++) {
+			NSUInteger _idx = i%self.images.count;
+			if([self.images[_idx] isKindOfClass:[NSNull class]]) {
+				dispatch_async(self->readFrameQueue, ^{
+					[self imageFromIndex:_idx];
+				});
 			}
 		}
 	});
