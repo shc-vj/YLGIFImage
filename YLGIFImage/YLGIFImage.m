@@ -217,16 +217,7 @@ static int _prefetchedNum = 10;
 	_scale = scale;
 
 	readFrameQueue = dispatch_queue_create("com.ronnie.gifreadframe", DISPATCH_QUEUE_CONCURRENT);
-	
-	// Prefetch frames
-	NSUInteger num = MIN(_prefetchedNum, numberOfFrames);
-    for (int i=0; i<num; i++) {
-		dispatch_async(readFrameQueue, ^{
-			[self imageFromIndex:i];
-		});
-	}
-	
-	
+		
     return self;
 }
 
