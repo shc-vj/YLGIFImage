@@ -260,7 +260,10 @@ static int _prefetchedNum = 10;
 			NSUInteger _idx = i%self.images.count;
 			if([self.images[_idx] isKindOfClass:[NSNull class]]) {
 				dispatch_async(self->readFrameQueue, ^{
-					[self imageFromIndex:_idx];
+					// check again for work done
+					if( [self.images[_idx] isKindOfClass:[NSNull class]] ) {
+						[self imageFromIndex:_idx];
+					}
 				});
 			}
 		}
