@@ -5,7 +5,7 @@ Pod::Spec.new do |s|
   s.homepage     = "https://github.com/liyong03/YLGIFImage"
   s.license      = { :type => 'MIT', :file => 'LICENSE' }
   s.author       = { "liyong03" => "liyong03@gmail.com" }
-  s.source       = { :git => "https://github.com/shc-vj/YLGIFImage.git", :tag => s.version.to_s }
+  s.source       = { :git => "https://github.com/shc-vj/YLGIFImage.git" }
   s.platform     = :ios, '6.0'
   s.source_files =  'YLGIFImage'
   s.frameworks   = 'Foundation', 'UIKit', 'MobileCoreServices', 'ImageIO', 'CoreGraphics'
