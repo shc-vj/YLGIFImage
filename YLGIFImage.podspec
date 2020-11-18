@@ -1,6 +1,6 @@
 Pod::Spec.new do |s|
   s.name         = "YLGIFImage"
-  s.version      = "0.12"
+  s.version      = "0.14"
   s.summary      = "Async GIF Image decoder and ImageView which supports playing GIF image."
   s.homepage     = "https://github.com/liyong03/YLGIFImage"
   s.license      = { :type => 'MIT', :file => 'LICENSE' }
