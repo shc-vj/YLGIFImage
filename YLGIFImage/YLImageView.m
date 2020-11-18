@@ -91,14 +91,16 @@ const NSTimeInterval kMaxTimeStep = 1; // note: To avoid spiral-o-death
 		if( gifImage.images.count <= 1 ) {
 			self.animatedImage = nil;
 			[super setImage:image];
+			self.currentFrame = nil;
 		} else {
 			UIImage *firstImage = [gifImage getFrameWithIndex:0];
 			[super setImage:firstImage];
 
 			self.animatedImage = (YLGIFImage *)image;
+			self.currentFrame = firstImage;
 		}
 		
-        self.currentFrame = nil;
+        
         self.loopCountdown = self.animatedImage.loopCount ?: NSUIntegerMax;
     } else {
         self.animatedImage = nil;
